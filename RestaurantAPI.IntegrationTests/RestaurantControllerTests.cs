@@ -4,6 +4,10 @@ using FluentAssertions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Net.Http;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using RestaurantAPI.Entities;
+using Microsoft.Extensions.DependencyInjection;
 namespace RestaurantAPI.IntegrationTests
 
 {
@@ -12,7 +16,20 @@ namespace RestaurantAPI.IntegrationTests
         private HttpClient _client;
         public RestaurantControllerTests(WebApplicationFactory<Startup> factory)
         {
-            _client = factory.CreateClient();
+            _client = factory
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.ConfigureServices(services =>
+                    {
+                        var dbContextOptions = services
+                            .SingleOrDefault(service => service.ServiceType == typeof(DbContextOptions<RestaurantDbContext>));
+                        services.Remove(dbContextOptions);
+                        //na tym etapie pozbylismy sie instniejacej rejestracji DbConxtextu, mozemy ja zastapic InMemory DbContext, ktora nie jest baza danych ale jej implementacja
+                        services.AddDbContext<RestaurantDbContext>(options => options.UseInMemoryDatabase("RestaurantDb"));
+                        //teraz, nasze api ktore potrzebujemy do testow, nie bedzie korzystac z baz danych mssql tylko inmemory
+                    });
+                })
+                .CreateClient();
         }
         [Theory]
         [InlineData("pageSize=5&pageNumber=1")]

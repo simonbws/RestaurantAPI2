@@ -12,6 +12,7 @@ using RestaurantAPI.Models;
 using Newtonsoft.Json;
 using System.Text;
 using Microsoft.AspNetCore.Authorization.Policy;
+using System.Security.Cryptography.X509Certificates;
 namespace RestaurantAPI.IntegrationTests
 
 {
@@ -60,10 +61,11 @@ namespace RestaurantAPI.IntegrationTests
                 City = "Kraków",
                 Street = "Długa 5"
             };
-            //serializujemy model do JSON
-            var json = JsonConvert.SerializeObject(model);
-            //wysylamy go jako zawartosc http na serwer
-            var httpContent = new StringContent(json, UnicodeEncoding.UTF8, "application/json");
+            ////serializujemy model do JSON
+            //var json = JsonConvert.SerializeObject(model);
+            ////wysylamy go jako zawartosc http na serwer
+            //var httpContent = new StringContent(json, UnicodeEncoding.UTF8, "application/json");
+            var httpContent = model.ToJsonHttpContent(); 
             // act
             var response = await _client.PostAsync("/api/restaurant", httpContent);
 
@@ -71,6 +73,26 @@ namespace RestaurantAPI.IntegrationTests
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
             response.Headers.Location.Should().NotBeNull();
         }
+        [Fact]
+        public async Task CreateRestaurant_WithInvalidModel_ReturnsBadRequest()
+        {
+            // arrange
+            var model = new CreateRestaurantDto()
+            {
+                ContactEmail = "test@test.com",
+                Description = "test desc",
+                ContactNumber = "323 322 323"
+            };
+            var httpContent = model.ToJsonHttpContent();
+            // act
+            var response = await _client.PostAsync("/api/restaurant", httpContent);
+            // arrange
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+            
+        }
+
+
+
         [Theory]
         [InlineData("pageSize=100&pageNumber=3")]
         [InlineData("pageSize=11&pageNumber=1")]

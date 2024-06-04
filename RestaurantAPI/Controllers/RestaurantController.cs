@@ -26,7 +26,7 @@ namespace RestaurantAPI.Controllers
         {
             _restaurantService = restaurantService;
         }
-
+        
         [HttpPost]
         public ActionResult CreateRestaurant([FromBody] CreateRestaurantDto dto)
         {

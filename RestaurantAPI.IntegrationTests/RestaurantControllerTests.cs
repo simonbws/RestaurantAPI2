@@ -8,6 +8,10 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using RestaurantAPI.Entities;
 using Microsoft.Extensions.DependencyInjection;
+using RestaurantAPI.Models;
+using Newtonsoft.Json;
+using System.Text;
+using Microsoft.AspNetCore.Authorization.Policy;
 namespace RestaurantAPI.IntegrationTests
 
 {
@@ -25,6 +29,9 @@ namespace RestaurantAPI.IntegrationTests
                             .SingleOrDefault(service => service.ServiceType == typeof(DbContextOptions<RestaurantDbContext>));
                         services.Remove(dbContextOptions);
                         //na tym etapie pozbylismy sie instniejacej rejestracji DbConxtextu, mozemy ja zastapic InMemory DbContext, ktora nie jest baza danych ale jej implementacja
+                        services.AddSingleton<IPolicyEvaluator, FakePolicyEvaluator>(); //dzieki tej linijce podczas procesowania zapytania ktore wymaga autentykacji czyli na endpoint z atrybutem authorize, to wykonanie takiej ewaluacji dostanie oddelegowane do fakepolicyevaluatior
+                        services.AddMvc(option => option.Filters.Add(new FakeUserFilter()));
+                        
                         services.AddDbContext<RestaurantDbContext>(options => options.UseInMemoryDatabase("RestaurantDb"));
                         //teraz, nasze api ktore potrzebujemy do testow, nie bedzie korzystac z baz danych mssql tylko inmemory
                     });
@@ -42,6 +49,27 @@ namespace RestaurantAPI.IntegrationTests
             var response =  await _client.GetAsync("/api/restaurant?" + queryParams);
             // assert
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        }
+        [Fact]
+        public async Task CreateRestaurant_WithValidModel_ReturnsCreatedStatus()
+        {
+            // arrange tworzymy przykladowymi model
+            var model = new CreateRestaurantDto()
+            {
+                Name = "TestRestaurant",
+                City = "Kraków",
+                Street = "Długa 5"
+            };
+            //serializujemy model do JSON
+            var json = JsonConvert.SerializeObject(model);
+            //wysylamy go jako zawartosc http na serwer
+            var httpContent = new StringContent(json, UnicodeEncoding.UTF8, "application/json");
+            // act
+            var response = await _client.PostAsync("/api/restaurant", httpContent);
+
+            // arrange
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+            response.Headers.Location.Should().NotBeNull();
         }
         [Theory]
         [InlineData("pageSize=100&pageNumber=3")]

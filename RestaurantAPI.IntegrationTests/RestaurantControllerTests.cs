@@ -19,9 +19,11 @@ namespace RestaurantAPI.IntegrationTests
     public class RestaurantControllerTests : IClassFixture<WebApplicationFactory<Startup>>
     {
         private HttpClient _client;
+        private WebApplicationFactory<Startup> _factory;
         public RestaurantControllerTests(WebApplicationFactory<Startup> factory)
         {
-            _client = factory
+
+            _factory = factory
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureServices(services =>
@@ -32,12 +34,12 @@ namespace RestaurantAPI.IntegrationTests
                         //na tym etapie pozbylismy sie instniejacej rejestracji DbConxtextu, mozemy ja zastapic InMemory DbContext, ktora nie jest baza danych ale jej implementacja
                         services.AddSingleton<IPolicyEvaluator, FakePolicyEvaluator>(); //dzieki tej linijce podczas procesowania zapytania ktore wymaga autentykacji czyli na endpoint z atrybutem authorize, to wykonanie takiej ewaluacji dostanie oddelegowane do fakepolicyevaluatior
                         services.AddMvc(option => option.Filters.Add(new FakeUserFilter()));
-                        
+
                         services.AddDbContext<RestaurantDbContext>(options => options.UseInMemoryDatabase("RestaurantDb"));
                         //teraz, nasze api ktore potrzebujemy do testow, nie bedzie korzystac z baz danych mssql tylko inmemory
                     });
-                })
-                .CreateClient();
+                });
+            _client = _factory.CreateClient();
         }
         [Theory]
         [InlineData("pageSize=5&pageNumber=1")]
@@ -50,6 +52,42 @@ namespace RestaurantAPI.IntegrationTests
             var response =  await _client.GetAsync("/api/restaurant?" + queryParams);
             // assert
             response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        }
+       
+        [Fact]
+        public async Task Delete_ForRestaurantOwner_NoContent()
+        {
+            //arrange
+            
+
+            var restaurant = new Restaurant()
+            {
+                CreatedById = 1,
+                Name = "Test"
+            };
+
+            //seed
+            var scopeFactory = _factory.Services.GetService<IServiceScopeFactory>();
+            using var scope = scopeFactory.CreateScope();
+            var _dbContext = scope.ServiceProvider.GetService<RestaurantDbContext>();
+
+
+            _dbContext.Restaurants.Add(restaurant);
+            _dbContext.SaveChanges();
+            // act
+            var response = await _client.DeleteAsync("/api/restaurant/" + restaurant.Id);
+
+            // assert
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+        }
+
+        [Fact]
+        public async Task Delete_ForNonExistingRestaurant_ReturnsNotFound()
+        {
+            // act
+            var response = await _client.DeleteAsync("/api/restaurant/987");
+            // assert
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
         }
         [Fact]
         public async Task CreateRestaurant_WithValidModel_ReturnsCreatedStatus()

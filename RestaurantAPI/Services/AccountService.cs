@@ -63,7 +63,7 @@ namespace RestaurantAPI.Services
             {
                 throw new BadRequestException("Invalid username or password");
             }
-
+            //jezeli istnieje, generacja claimow
             var claims = new List<Claim>()
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -79,7 +79,7 @@ namespace RestaurantAPI.Services
                     new Claim("Nationality", user.Nationality)
                     );
             }
-
+            //generacja tokenu JWT po czym zwrocenie go do klienta
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authenticationSettings.JwtKey));
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var expires = DateTime.Now.AddDays(_authenticationSettings.JwtExpireDays);

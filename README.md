@@ -53,9 +53,12 @@ The API uses an **in-memory EF Core database**, so no external SQL Server is nee
 Fake authentication (`FakePolicyEvaluator` + `FakeUserFilter`) allows testing of endpoints protected by `[Authorize]`.
 
 ---
-
+### Author 
+simonbws
 ### This project is a fork and extension of the RestaurantAPI project
-developed in the Udemy course by Jakub Kozera.
+Developed as part of the Udemy course by Jakub Kozera.
+---
+[View Certificate of Completion] https://www.udemy.com/certificate/UC-64ef54c6-3719-4bed-bf53-e172b54d6acc/
 ## Example Test
 
 ```csharp
@@ -75,4 +78,5 @@ public async Task CreateRestaurant_WithValidModel_ReturnsCreatedStatus()
     response.StatusCode.Should().Be(HttpStatusCode.Created);
     response.Headers.Location.Should().NotBeNull();
 }
+
 
